@@ -4,6 +4,7 @@ from spacetime.client.IApplication import IApplication
 from spacetime.client.declarations import Producer, GetterSetter, Getter
 from lxml import html,etree
 from lxml.html.clean import Cleaner
+from collections import Counter
 import re, os
 from time import time
 
@@ -88,7 +89,6 @@ def extract_next_links(rawDatas):
     Each obj is of type UrlResponse  declared at L28-42 datamodel/search/datamodel.py
     the return of this function should be a list of urls in their absolute form
     Validation of link via is_valid function is done later (see line 42).
-    It is not required to remove duplicates that have already been downloaded. 
     The frontier takes care of that.
 
     Suggested library: lxml
@@ -106,7 +106,7 @@ def extract_next_links(rawDatas):
                 doc.make_links_absolute(raw_content_obj.url, resolve_base_href=True)
                 for e, a, l, p in doc.iterlinks(): # Get (element, attribute, link, pos) for every link in doc
                     outputLinks.append(l)
-                    print l
+                    #print l
 
             except etree.XMLSyntaxError as e:
                 #print "Error on url " + raw_content_obj.url + " " + str(e)
@@ -114,9 +114,11 @@ def extract_next_links(rawDatas):
 
     return outputLinks
 
+
 def should_extract_urls(raw_content_obj):
-    #print "Content code: "  + raw_content_obj.http_code
-    return raw_content_obj.http_code == "200" # HTTP Response Code 200 OK
+    # print "Content code: "  + raw_content_obj.http_code
+    return raw_content_obj.http_code == "200"  # HTTP Response Code 200 OK
+
 
 def is_valid(url):
     '''
@@ -128,13 +130,22 @@ def is_valid(url):
     parsed = urlparse(url)
     if parsed.scheme not in set(["http", "https"]):
         return False
+
+    path = parsed.path # Get url path
+    paths_split = [s for s in path.split("/") if s != ''] # Split path individually, remove empty space
+    #print paths_split
+
+    if Counter(paths_split).most_common(1) > 3: # Check if there is a path that is duplicated > 3 times
+        #print "too many duplicates"
+        return False
+
     try:
         return ".ics.uci.edu" in parsed.hostname \
-            and not re.match(".*\.(css|js|bmp|gif|jpe?g|ico" + "|png|tiff?|mid|mp2|mp3|mp4"\
-            + "|wav|avi|mov|mpeg|ram|m4v|mkv|ogg|ogv|pdf" \
-            + "|ps|eps|tex|ppt|pptx|doc|docx|xls|xlsx|names|data|dat|exe|bz2|tar|msi|bin|7z|psd|dmg|iso|epub|dll|cnf|tgz|sha1" \
-            + "|thmx|mso|arff|rtf|jar|csv"\
-            + "|rm|smil|wmv|swf|wma|zip|rar|gz)$", parsed.path.lower())
+               and not re.match(".*\.(css|js|bmp|gif|jpe?g|ico" + "|png|tiff?|mid|mp2|mp3|mp4" \
+                                + "|wav|avi|mov|mpeg|ram|m4v|mkv|ogg|ogv|pdf" \
+                                + "|ps|eps|tex|ppt|pptx|doc|docx|xls|xlsx|names|data|dat|exe|bz2|tar|msi|bin|7z|psd|dmg|iso|epub|dll|cnf|tgz|sha1" \
+                                + "|thmx|mso|arff|rtf|jar|csv" \
+                                + "|rm|smil|wmv|swf|wma|zip|rar|gz)$", parsed.path.lower())
 
     except TypeError:
         print ("TypeError for ", parsed)
