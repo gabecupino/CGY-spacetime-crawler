@@ -2,7 +2,8 @@ import logging
 from datamodel.search.datamodel import ProducedLink, OneUnProcessedGroup, robot_manager, Link
 from spacetime.client.IApplication import IApplication
 from spacetime.client.declarations import Producer, GetterSetter, Getter
-from lxml import html,etree
+from lxml import html, etree
+from lxml.html import html5parser
 from lxml.html.clean import Cleaner
 from collections import Counter
 import re, os
@@ -15,18 +16,17 @@ except ImportError:
     # For python 3
     from urllib.parse import urlparse, parse_qs
 
-
 logger = logging.getLogger(__name__)
 LOG_HEADER = "[CRAWLER]"
-url_count = (set() 
-    if not os.path.exists("successful_urls.txt") else 
-    set([line.strip() for line in open("successful_urls.txt").readlines() if line.strip() != ""]))
+url_count = (set()
+             if not os.path.exists("successful_urls.txt") else
+             set([line.strip() for line in open("successful_urls.txt").readlines() if line.strip() != ""]))
 MAX_LINKS_TO_DOWNLOAD = 3000
+
 
 @Producer(ProducedLink, Link)
 @GetterSetter(OneUnProcessedGroup)
 class CrawlerFrame(IApplication):
-
     def __init__(self, frame):
         self.starttime = time()
         # Set app_id <student_id1>_<student_id2>...
@@ -34,10 +34,10 @@ class CrawlerFrame(IApplication):
         # Set user agent string to IR W17 UnderGrad <student_id1>, <student_id2> ...
         # If Graduate studetn, change the UnderGrad part to Grad.
         self.UserAgentString = "IR W17 UnderGrad 49787805 67913318 88551199"
-		
+
         self.frame = frame
-        assert(self.UserAgentString != None)
-        assert(self.app_id != "")
+        assert (self.UserAgentString != None)
+        assert (self.app_id != "")
         if len(url_count) >= MAX_LINKS_TO_DOWNLOAD:
             self.done = True
 
@@ -65,6 +65,7 @@ class CrawlerFrame(IApplication):
         print "downloaded ", len(url_count), " in ", time() - self.starttime, " seconds."
         pass
 
+
 def save_count(urls):
     global url_count
     urls = set(urls).difference(url_count)
@@ -73,15 +74,19 @@ def save_count(urls):
         with open("successful_urls.txt", "a") as surls:
             surls.write(("\n".join(urls) + "\n").encode("utf-8"))
 
+
 def process_url_group(group, useragentstr):
     rawDatas, successfull_urls = group.download(useragentstr, is_valid)
     save_count(successfull_urls)
     return extract_next_links(rawDatas), rawDatas
-    
+
+
 #######################################################################################
 '''
 STUB FUNCTIONS TO BE FILLED OUT BY THE STUDENT.
 '''
+
+
 def extract_next_links(rawDatas):
     outputLinks = list()
     '''
@@ -94,22 +99,24 @@ def extract_next_links(rawDatas):
     Suggested library: lxml
     '''
 
-    #cleaner = Cleaner(page_structure = False, links = False) # clean(remove) scripts, special tags, css style annotations, etc
+    # cleaner = Cleaner(page_structure = False, links = False) # clean(remove) scripts, special tags, css style annotations, etc
     for raw_content_obj in rawDatas:
 
         if should_extract_urls(raw_content_obj):
             try:
                 content = raw_content_obj.content
-                #content = cleaner.clean_html(content)
+                # content = cleaner.clean_html(content)
 
-                doc = html.fromstring(content) # Parse html content
+                e = html5parser.fromstring(content)  # Parse html5 content into element
+                doc = html.fromstring(html.tostring(e)) # Weird workaround when using html5parser.from_string and html.fromstring
+                                                        # because they return different objects
                 doc.make_links_absolute(raw_content_obj.url, resolve_base_href=True)
-                for e, a, l, p in doc.iterlinks(): # Get (element, attribute, link, pos) for every link in doc
+                for e, a, l, p in doc.iterlinks():  # Get (element, attribute, link, pos) for every link in doc
                     outputLinks.append(l)
                     #print l
 
             except etree.XMLSyntaxError as e:
-                #print "Error on url " + raw_content_obj.url + " " + str(e)
+                print "Error on url " + raw_content_obj.url + " " + str(e)
                 raw_content_obj.bad_url = True
 
     return outputLinks
@@ -127,25 +134,30 @@ def is_valid(url):
 
     This is a great place to filter out crawler traps.
     '''
-    print(url)
     parsed = urlparse(url)
-    dynamic_strings = ["calendar","~mlearn","graphmod","flamingo",".pdf"]
-    
+    #dynamic_strings = ["calendar", "~mlearn", "graphmod", "flamingo", ".pdf"]
+
     if parsed.scheme not in set(["http", "https"]):
         return False
 
-    path = parsed.path # Get url path
-    paths_split = [s for s in path.split("/") if s != ''] # Split path individually, remove empty space
-    #print paths_split
+    path = parsed.path  # Get url path
+    #paths_split = [s for s in path.split("/") if s != ""]  # Split path individually, remove empty space
+    paths_split = path.split("/")
 
-    if Counter(paths_split).most_common(1) > 3: # Check if there is a path that is duplicated > 3 times
-        #print "too many duplicates"
+    # print paths_split
+
+    word, freq = Counter(paths_split).most_common(1)[0]
+    if freq > 3:  # Check if there is a path that is duplicated > 3 times
+        print "too many duplicates: ", url
         return False
 
-    for string in dynamic_strings:
-        if string in url:
-            return False
+    #for string in dynamic_strings:
+    #    if string in url:
+    #        return False
 
+    if "?" in url and "=" in url:
+        print "? and = in url: ", url
+        return False
 
     try:
         return ".ics.uci.edu" in parsed.hostname \
