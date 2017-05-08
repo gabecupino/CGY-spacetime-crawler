@@ -127,7 +127,10 @@ def is_valid(url):
 
     This is a great place to filter out crawler traps.
     '''
+    print(url)
     parsed = urlparse(url)
+    dynamic_strings = ["calendar","~mlearn","graphmod","flamingo",".pdf"]
+    
     if parsed.scheme not in set(["http", "https"]):
         return False
 
@@ -138,6 +141,11 @@ def is_valid(url):
     if Counter(paths_split).most_common(1) > 3: # Check if there is a path that is duplicated > 3 times
         #print "too many duplicates"
         return False
+
+    for string in dynamic_strings:
+        if string in url:
+            return False
+
 
     try:
         return ".ics.uci.edu" in parsed.hostname \
