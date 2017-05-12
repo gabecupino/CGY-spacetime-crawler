@@ -33,7 +33,7 @@ class CrawlerFrame(IApplication):
         self.app_id = "49787805_67913318_88551199"
         # Set user agent string to IR W17 UnderGrad <student_id1>, <student_id2> ...
         # If Graduate studetn, change the UnderGrad part to Grad.
-        self.UserAgentString = "IR W17 UnderGrad 49787805 67913318 88551199"
+        self.UserAgentString = "IR W17 UnderGrad 49787805 67913318 88551199 TEST"
 
         self.frame = frame
         assert (self.UserAgentString != None)
@@ -135,7 +135,8 @@ def is_valid(url):
     This is a great place to filter out crawler traps.
     '''
     parsed = urlparse(url)
-    #dynamic_strings = ["calendar", "~mlearn", "graphmod", "flamingo", ".pdf"]
+    
+
 
     if parsed.scheme not in set(["http", "https"]):
         return False
@@ -147,7 +148,7 @@ def is_valid(url):
     # print paths_split
 
     word, freq = Counter(paths_split).most_common(1)[0]
-    if freq > 3:  # Check if there is a path that is duplicated > 3 times
+    if freq > 3:  # Check if there is a path that is duplicated > 3 times 
         print "too many duplicates: ", url
         return False
 
@@ -159,6 +160,13 @@ def is_valid(url):
         print "? and = in url: ", url
         return False
 
+    if "ugrad/index.php/" in url and len(parsed.path) > 13:
+        print (url, "ugrad rekt")
+        return False
+
+   
+    
+    
     try:
         return ".ics.uci.edu" in parsed.hostname \
                and not re.match(".*\.(css|js|bmp|gif|jpe?g|ico" + "|png|tiff?|mid|mp2|mp3|mp4" \
