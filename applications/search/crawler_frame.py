@@ -136,7 +136,7 @@ def is_valid(url):
     '''
     parsed = urlparse(url)
     
-
+    print (url)
 
     if parsed.scheme not in set(["http", "https"]):
         return False
@@ -163,7 +163,10 @@ def is_valid(url):
     if "ugrad/index.php/" in url and len(parsed.path) > 13:
         print (url, "ugrad rekt")
         return False
-
+    
+    if "ugrad/index/" in url and len(parsed.path) > 9:
+        print (url, "ugrad rekt")
+        return False
    
     
     
