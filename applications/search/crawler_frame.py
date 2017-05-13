@@ -210,6 +210,16 @@ def is_valid(url):
         print (url, ": not absolute")
         return False
 
+    if ".php" in url:
+        if url.find(".php") != len(url) -4:
+            print "Extra chars after .php in url: ", url
+            return False
+
+    if ".html" in url:
+        if url.find(".html") != len(url) - 5:
+            print "Extra chars after .html in url: ", url
+            return False
+
     try:
         return ".ics.uci.edu" in parsed.hostname \
                and not re.match(".*\.(css|js|bmp|gif|jpe?g|ico" + "|png|tiff?|mid|mp2|mp3|mp4" \
