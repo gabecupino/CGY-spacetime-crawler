@@ -194,6 +194,14 @@ def is_valid(url):
     if "ugrad/index/" in url and len(parsed.path) > 9:
         print (url, "ugrad rekt")
         return False
+
+     if "mailto" in url:
+        print (url, "ugrad rekt")
+        return False
+
+    if "/ugrad/QA_Graduation" in url:
+        print (url, "ugrad rekt")
+        return False
    
     
     
