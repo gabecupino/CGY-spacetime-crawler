@@ -204,7 +204,7 @@ def is_valid(url):
         return False
 
     
-    if (not is_absolute(url)):
+    if not is_absolute(url):
         print (url, ": not absolute")
         return False
    
