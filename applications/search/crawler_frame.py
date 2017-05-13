@@ -74,10 +74,11 @@ class CrawlerFrame(IApplication):
     def shutdown(self):
         print "downloaded ", len(url_count), " in ", time() - self.starttime, " seconds."
         with open("analytics.txt", "w") as analytics:
-            analytics.write(("List of subdomains visited and frequency of visits:\n").encode("utf-8"))
-            for key, value in d.iteritems():
-                analytics.write(key + ": " + str(value) + "\n")
-            analytics.write(("\nNumber of invalid links: " + invalid_count + "\n").encode("utf-8"))
+            analytics.write(("Downloaded " + str(len(url_count)) + " in " + str(time() - self.starttime) + " seconds.\n").encode("utf-8"))
+            analytics.write(("\nList of subdomains visited and frequency of visits:\n").encode("utf-8"))
+            for key, value in subdomain_frequencies.iteritems():
+                analytics.write("\t" + key + ": " + str(value) + "\n")
+            analytics.write(("\nNumber of invalid links: " + str(invalid_count) + "\n").encode("utf-8"))
             analytics.write(("\nPage with most out links: " + max_outlink_url + " with "\
                              + str(max_outlinks) + ".\n").encode("utf-8"))
         pass
@@ -151,7 +152,7 @@ def extract_next_links(rawDatas):
 
 def should_extract_urls(raw_content_obj):
     # print "Content code: "  + raw_content_obj.http_code
-    return raw_content_obj.http_code == "200"  # HTTP Response Code 200 OK
+    return raw_content_obj.http_code == "200" and is_valid(raw_content_obj.url)# HTTP Response Code 200 OK
 
 
 def is_valid(url):
@@ -207,7 +208,6 @@ def is_valid(url):
     if not is_absolute(url):
         print (url, ": not absolute")
         return False
-   
     
     
     try:
