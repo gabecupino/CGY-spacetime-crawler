@@ -195,7 +195,7 @@ def is_valid(url):
         print (url, "ugrad rekt")
         return False
 
-     if "mailto" in url:
+    if "mailto" in url:
         print (url, "ugrad rekt")
         return False
 
