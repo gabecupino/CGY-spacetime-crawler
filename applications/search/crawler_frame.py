@@ -23,6 +23,12 @@ url_count = (set()
              set([line.strip() for line in open("successful_urls.txt").readlines() if line.strip() != ""]))
 MAX_LINKS_TO_DOWNLOAD = 3000
 
+# Analytics logging variables
+subdomain_frequencies = dict()
+invalid_count = 0
+max_outlinks = 0
+max_outlink_url = ""
+
 
 @Producer(ProducedLink, Link)
 @GetterSetter(OneUnProcessedGroup)
@@ -50,19 +56,30 @@ class CrawlerFrame(IApplication):
     def update(self):
         for g in self.frame.get_new(OneUnProcessedGroup):
             print "Got a Group"
+            global invalid_count
             outputLinks, urlResps = process_url_group(g, self.UserAgentString)
             for urlResp in urlResps:
                 if urlResp.bad_url and self.UserAgentString not in set(urlResp.dataframe_obj.bad_url):
                     urlResp.dataframe_obj.bad_url += [self.UserAgentString]
             for l in outputLinks:
                 if is_valid(l) and robot_manager.Allowed(l, self.UserAgentString):
+                    update_subdomain_frequencies(l)
                     lObj = ProducedLink(l, self.UserAgentString)
                     self.frame.add(lObj)
+                else:
+                    invalid_count += 1 # keeps track of invalid link count
         if len(url_count) >= MAX_LINKS_TO_DOWNLOAD:
             self.done = True
 
     def shutdown(self):
         print "downloaded ", len(url_count), " in ", time() - self.starttime, " seconds."
+        with open("analytics.txt", "w") as analytics:
+            analytics.write(("List of subdomains visited and frequency of visits:\n").encode("utf-8"))
+            for key, value in d.iteritems():
+                analytics.write(key + ": " + str(value) + "\n")
+            analytics.write(("\nNumber of invalid links: " + invalid_count + "\n").encode("utf-8"))
+            analytics.write(("\nPage with most out links: " + max_outlink_url + " with "\
+                             + str(max_outlinks) + ".\n").encode("utf-8"))
         pass
 
 
@@ -88,6 +105,8 @@ STUB FUNCTIONS TO BE FILLED OUT BY THE STUDENT.
 
 
 def extract_next_links(rawDatas):
+    global max_outlinks
+    global max_outlink_url
     outputLinks = list()
     '''
     rawDatas is a list of objs -> [raw_content_obj1, raw_content_obj2, ....]
@@ -104,6 +123,7 @@ def extract_next_links(rawDatas):
 
         if should_extract_urls(raw_content_obj):
             try:
+                
                 content = raw_content_obj.content
                 # content = cleaner.clean_html(content)
 
@@ -111,14 +131,21 @@ def extract_next_links(rawDatas):
                 doc = html.fromstring(html.tostring(e)) # Weird workaround when using html5parser.from_string and html.fromstring
                                                         # because they return different objects
                 doc.make_links_absolute(raw_content_obj.url, resolve_base_href=True)
+
+                link_count = 0
                 for e, a, l, p in doc.iterlinks():  # Get (element, attribute, link, pos) for every link in doc
                     outputLinks.append(l)
+                    link_count += 1
                     #print l
 
+                if (link_count > max_outlinks):
+                    max_outlinks = link_count
+                    max_outlink_url = raw_content_obj.url
+                
             except etree.XMLSyntaxError as e:
                 print "Error on url " + raw_content_obj.url + " " + str(e)
                 raw_content_obj.bad_url = True
-
+    
     return outputLinks
 
 
@@ -180,3 +207,16 @@ def is_valid(url):
 
     except TypeError:
         print ("TypeError for ", parsed)
+
+
+
+def update_subdomain_frequencies(url):
+    global subdomain_frequencies
+    parsed = urlparse(url)
+    hostname = parsed.hostname
+    if (hostname[:3] != "www"):
+        subdomain = parsed.hostname[:-12]
+        if (subdomain in subdomain_frequencies):
+            subdomain_frequencies[subdomain] += 1
+        else:
+            subdomain_frequencies[subdomain] = 1
