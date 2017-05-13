@@ -39,7 +39,7 @@ class CrawlerFrame(IApplication):
         self.app_id = "49787805_67913318_88551199"
         # Set user agent string to IR W17 UnderGrad <student_id1>, <student_id2> ...
         # If Graduate studetn, change the UnderGrad part to Grad.
-        self.UserAgentString = "IR W17 UnderGrad 49787805 67913318 88551199 TEST"
+        self.UserAgentString = "IR W17 UnderGrad 49787805, 67913318, 88551199 TEST"
 
         self.frame = frame
         assert (self.UserAgentString != None)
@@ -124,35 +124,36 @@ def extract_next_links(rawDatas):
 
         if should_extract_urls(raw_content_obj):
             try:
-                
+
                 content = raw_content_obj.content
                 # content = cleaner.clean_html(content)
 
                 e = html5parser.fromstring(content)  # Parse html5 content into element
-                doc = html.fromstring(html.tostring(e)) # Weird workaround when using html5parser.from_string and html.fromstring
-                                                        # because they return different objects
+                doc = html.fromstring(
+                    html.tostring(e))  # Weird workaround when using html5parser.from_string and html.fromstring
+                # because they return different objects
                 doc.make_links_absolute(raw_content_obj.url, resolve_base_href=True)
 
                 link_count = 0
                 for e, a, l, p in doc.iterlinks():  # Get (element, attribute, link, pos) for every link in doc
                     outputLinks.append(l)
                     link_count += 1
-                    #print l
+                    # print l
 
                 if (link_count > max_outlinks):
                     max_outlinks = link_count
                     max_outlink_url = raw_content_obj.url
-                
+
             except etree.XMLSyntaxError as e:
                 print "Error on url " + raw_content_obj.url + " " + str(e)
                 raw_content_obj.bad_url = True
-    
+
     return outputLinks
 
 
 def should_extract_urls(raw_content_obj):
     # print "Content code: "  + raw_content_obj.http_code
-    return raw_content_obj.http_code == "200" and is_valid(raw_content_obj.url)# HTTP Response Code 200 OK
+    return raw_content_obj.http_code == "200" and is_valid(raw_content_obj.url)  # HTTP Response Code 200 OK
 
 
 def is_valid(url):
@@ -163,26 +164,27 @@ def is_valid(url):
     This is a great place to filter out crawler traps.
     '''
     parsed = urlparse(url)
-    
+
     print (url)
 
     if parsed.scheme not in set(["http", "https"]):
         return False
 
     path = parsed.path  # Get url path
-    #paths_split = [s for s in path.split("/") if s != ""]  # Split path individually, remove empty space
+    # paths_split = [s for s in path.split("/") if s != ""]  # Split path individually, remove empty space
     paths_split = path.split("/")
 
     # print paths_split
 
+    if len(paths_split) > 10:
+        print "Too many paths", url
+        return False
+
     word, freq = Counter(paths_split).most_common(1)[0]
-    if freq > 3:  # Check if there is a path that is duplicated > 3 times 
+    if freq > 2:  # Check if there is a path that is duplicated > 2 times
         print "too many duplicates: ", url
         return False
 
-    #for string in dynamic_strings:
-    #    if string in url:
-    #        return False
 
     if "?" in url and "=" in url:
         print "? and = in url: ", url
@@ -191,7 +193,7 @@ def is_valid(url):
     if "ugrad/index.php/" in url and len(parsed.path) > 13:
         print (url, "ugrad rekt")
         return False
-    
+
     if "ugrad/index/" in url and len(parsed.path) > 9:
         print (url, "ugrad rekt")
         return False
@@ -204,12 +206,10 @@ def is_valid(url):
         print (url, "ugrad rekt")
         return False
 
-    
     if not is_absolute(url):
         print (url, ": not absolute")
         return False
-    
-    
+
     try:
         return ".ics.uci.edu" in parsed.hostname \
                and not re.match(".*\.(css|js|bmp|gif|jpe?g|ico" + "|png|tiff?|mid|mp2|mp3|mp4" \
