@@ -202,6 +202,11 @@ def is_valid(url):
     if "/ugrad/QA_Graduation" in url:
         print (url, "ugrad rekt")
         return False
+
+    
+    if (not is_absolute(url)):
+        print (url, ": not absolute")
+        return False
    
     
     
@@ -216,6 +221,9 @@ def is_valid(url):
     except TypeError:
         print ("TypeError for ", parsed)
 
+
+def is_absolute(url):
+    return bool(urlparse(url).netloc)
 
 
 def update_subdomain_frequencies(url):
